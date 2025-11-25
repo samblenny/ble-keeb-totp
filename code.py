@@ -20,6 +20,11 @@ from adafruit_display_text import label
 from adafruit_ds3231 import DS3231
 from adafruit_st7789 import ST7789
 
+from sb_totp import base32_encode, totp_sha1
+
+
+PROX_THRESHOLD = const(4)
+
 
 # Begin TFT backlight dimming (100% brightness is PWM duty_cycle=0xffff)
 BACKLIGHT_ON = const(26214)  # 40% of 0xffff
@@ -68,20 +73,31 @@ def format_datetime(t):
     time = '%02d:%02d:%02d' % (t[3:6])
     return (date, time)
 
-# ---
-# Okay, now actually do something...
-# ---
-PROX_THRESHOLD = const(4)
+# Print startup info to check on EEPROM and RTC
 print('EEPROM length:', len(eeprom))
-print('EEPROM[:64]:', eeprom[:64])
+print('EEPROM[:32]:', eeprom[:32])
 print('DS3231 datetime: %s %s' % format_datetime(rtc.datetime))
+
+# Initialize TOTP account label and secret (use slot 1)
+slot = 4
+base = 32 + (slot - 1) * 64
+label = eeprom[base:base+8].decode('utf-8').rstrip('\x00')
+secret_bytes = eeprom[base + 32:base + 64]  # 32-byte secret stored in EEPROM
+secret_b32 = base32_encode(secret_bytes)
+
+
+# ---
+# Main Loop
+# ---
 t = prev_t = rtc.datetime
 prev_prox = apds.proximity > PROX_THRESHOLD  # True means hand near sensor
 enable = True
+totp_code = totp_sha1(secret_b32, time.mktime(t), digits=6, period=30)
 while True:
     if enable:
         # Update display only when backlight is on
-        textbox.text = '%s\n %s' % format_datetime(t)
+        (date, time_str) = format_datetime(t)
+        textbox.text = '%s\n%s\n%s\n%s' % (date, time_str, label, totp_code)
         display.refresh()
     # Wait until second rolls over
     while t.tm_sec == prev_t.tm_sec:
@@ -100,3 +116,7 @@ while True:
                     textbox.text = ''
                     display.refresh()
     prev_t = t
+    if t.tm_sec % 30 == 0:
+        # Generate new totp code at multiples of 30 seconds
+        unix_time = time.mktime(rtc.datetime)
+        totp_code = totp_sha1(secret_b32, unix_time, digits=6, period=30)
