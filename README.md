@@ -77,3 +77,56 @@ Each of the "year:", "month:", "day:", etc. prompts come from python's
 `set_clock()`, and the numbers on the right are an example of what you might
 type for your response. When you hit return or enter for the seconds line, the
 time will be set immediately.
+
+
+## Store TOTP Accounts in EEPROM Database
+
+The `util` module has several functions for managing the 4KB EEPROM as a
+database of TOTP account details. You can enter QR code URIs with a 2D barcode
+reader or by decoding elsewhere then copying and pasting. The EEPROM database
+only stores a short (8 character) label and the 32 byte decoded seed (from the
+`&secret=...` TOTP URI query parameter). The only supported options for
+`&algorithm=`, `&digits=`, and `&period=` are SHA1, 6 digits, and 30 seconds.
+That will work for many services that use TOTP. If you need something else, you
+can modify the code.
+
+To get started managing the EEPROM database, open the USB serial console and do
+the Ctrl-C thing to get into the CircuitPython REPL. From there, import util
+then call `util.menu()` to see what's available. The first time, you will need
+to format the EEPROM. After that, you can add, erase, or copy accounts as you
+like. There are 15 available slots (chosen to fit what can be selected with
+chording key-presses on a 4 key NeoKey keypad).
+
+This is an example of how it might look to use the menu:
+
+```
+>>> import util
+>>> util.menu()
+Available functions:
+
+ 1. add_totp_account()    - Add a new TOTP account.
+ 2. copy_totp_account()   - Copy a TOTP account to another slot.
+ 3. erase_totp_account()  - Erase a TOTP account from EEPROM.
+ 4. format_eeprom()       - Format the EEPROM for TOTP storage.
+ 5. get_time()            - Get the current DS3231 RTC time.
+ 6. list_totp_accounts()  - List all stored TOTP accounts.
+ 7. set_time()            - Set the DS3231 RTC time.
+
+Choose a function by number (or Enter to cancel): 6
+Slot 1: 'adafruit'
+Slot 2: 'gmail'
+Slot 3: 'discord'
+Slot 4: -- empty --
+Slot 5: -- empty --
+Slot 6: -- empty --
+Slot 7: -- empty --
+Slot 8: -- empty --
+Slot 9: -- empty --
+Slot 10: -- empty --
+Slot 11: -- empty --
+Slot 12: -- empty --
+Slot 13: -- empty --
+Slot 14: -- empty --
+Slot 15: -- empty --
+>>>
+```

@@ -4,19 +4,25 @@
 # This is meant to be imported from the CircuitPython REPL to set the DS3231
 # clock after installing a new battery.
 #
-# Usage example:
-# >>> import util
-# DS3231 datetime: 2000-01-01 02:06:52
-# >>> util.set_clock()
-# Set DS3231 RTC time...
-#    year: 2025
-#   month: 11
-#     day: 25
-#    hour: 00
-#  minute: 01
-# seconds: 02
-# new RTC time:  2025-11-25 00:01:02
-# >>>
+# See NOTES.md for documentation links.
+#
+# Usage example (CircuitPython REPL in USB serial console):
+#
+#     >>> import util
+#     >>> util.menu()
+#     Available functions:
+#
+#      1. add_totp_account()    - Add a new TOTP account.
+#      2. copy_totp_account()   - Copy a TOTP account to another slot.
+#      3. erase_totp_account()  - Erase a TOTP account from EEPROM.
+#      4. format_eeprom()       - Format the EEPROM for TOTP storage.
+#      5. get_time()            - Get the current DS3231 RTC time.
+#      6. list_totp_accounts()  - List all stored TOTP accounts.
+#      7. set_time()            - Set the DS3231 RTC time.
+#
+#     Choose a function by number (or Enter to cancel):
+#     Operation canceled.
+#     >>>
 #
 import board
 import busio
