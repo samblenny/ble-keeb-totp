@@ -96,17 +96,20 @@ except ValueError as e:
 # Track index of the selected account, or None if no accounts are available
 selected_account_index = None if len(accounts) == 0 else 0
 
-def get_next_account_index():
-    # Return index of next account, or None if no accounts are available
+def select_next_account():
+    # Increment selected account index, modulo total number of accounts
+    global selected_account_index
     if len(accounts) == 0:
-        return None
-    return (selected_account_index + 1) % len(accounts)
+        return
+    selected_account_index = (selected_account_index + 1) % len(accounts)
 
-def get_prev_account_index():
-    # Return index of previous account, or None if no accounts are available
+def select_prev_account():
+    # Decrement selected account index, modulo total number of accounts
+    global selected_account_index
     if len(accounts) == 0:
-        return None
-    return (selected_account_index + len(accounts) - 1) % len(accounts)
+        return
+    selected_account_index = ((selected_account_index + len(accounts) - 1) %
+        len(accounts))
 
 def get_selected_totp(unix_time):
     # Get TOTP slot, label, and code for the selected account
@@ -125,46 +128,82 @@ if selected_account_index is not None:
     print("Selected Slot:", accounts[selected_account_index].slot)
 
 
+# Prepare for using CLUE buttons to cycle through TOTP account slots
+button_A = digitalio.DigitalInOut(board.BUTTON_A)
+button_B = digitalio.DigitalInOut(board.BUTTON_B)
+button_A.pull = digitalio.Pull.UP
+button_B.pull = digitalio.Pull.UP
+prev_a = button_A.value
+prev_b = button_B.value
+
+
 # ---
 # Main Loop
 # ---
-t = prev_t = rtc.datetime
+t = rtc.datetime
+prev_t = t
 prev_prox = apds.proximity > PROX_THRESHOLD  # True means hand near sensor
-enable = True
+bl_enable = True
+need_refresh = True
 slot, label, totp_code = get_selected_totp(time.mktime(t))
 while True:
-    if enable:
-        # Update display only when backlight is on
+
+    # Update display only when backlight is on
+    if bl_enable:
         (date, time_str) = format_datetime(t)
         textbox.text = '%s\n%s\n%s %s\n%s' % (date, time_str, slot, label,
             totp_code)
         display.refresh()
+        need_refresh = False
+
     # Wait until second rolls over
-    while t.tm_sec == prev_t.tm_sec:
-        # 1. Spend about 100ms fast-polling the proximity sensor
+    while t.tm_sec == prev_t.tm_sec and not need_refresh:
+
+        # 1. Spend about 100ms fast-polling for input events
         t_10Hz = time.monotonic() + 0.1
-        while time.monotonic() < t_10Hz:
+        while time.monotonic() < t_10Hz and not need_refresh:
+
+            # Check Button A
+            va = button_A.value
+            if (not va) and prev_a:
+                # Falling edge of button A press -> select next TOTP account
+                select_next_account()
+                need_refresh = True
+            prev_a = va
+
+            # Check Button B
+            vb = button_B.value
+            if (not vb) and prev_b:
+                # Falling edge of button B press -> select previous account
+                select_prev_account()
+                need_refresh = True
+            prev_b = vb
+
+            # Check Proximity Sensor
             prox_event = apds.proximity > PROX_THRESHOLD
             if prox_event != prev_prox:
                 prev_prox = prox_event
                 if prox_event:
-                    # Toggle backlight on rising edge
-                    enable = not enable
-                    dc = BACKLIGHT_ON if enable else BACKLIGHT_OFF
+                    # Toggle backlight on leading edge of proximity event
+                    bl_enable = not bl_enable
+                    dc = BACKLIGHT_ON if bl_enable else BACKLIGHT_OFF
                     backlight.duty_cycle = dc
-                    if not enable:
+                    if not bl_enable:
                         textbox.text = ''
                         display.refresh()
-            # Small sleep to rate limit I2C and let VM do background tasks
+
+            # Sleep to rate limit I2C, debounce buttons, do VM background tasks
             time.sleep(0.05)
 
         # 2. Poll RTC at about 10 Hz to detect when seconds have changed
-        if enable:
+        if bl_enable:
             t = rtc.datetime
+
     # After the seconds have changed, update the previous time
     prev_t = t
-    # RTC seconds have incremented, so check the TOTP period
-    if t.tm_sec % 30 == 0:
+
+    # RTC seconds have incremented (or need refresh), so check the TOTP period
+    if t.tm_sec % 30 == 0 or need_refresh:
         # Generate new totp code at multiples of 30 seconds
         unix_time = time.mktime(rtc.datetime)
         slot, label, totp_code = get_selected_totp(unix_time)
