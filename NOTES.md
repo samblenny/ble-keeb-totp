@@ -13,10 +13,11 @@ Related Learn Guides:
 
 Related API Docs:
 - https://docs.circuitpython.org/en/latest/shared-bindings/atexit/
-- https://docs.circuitpython.org/en/latest/shared-bindings/supervisor/#supervisor.StatusBar
+- https://docs.circuitpython.org/en/latest/shared-bindings/supervisor/
 - https://docs.circuitpython.org/en/latest/shared-bindings/busio/#busio.SPI
 - https://docs.circuitpython.org/projects/ds3231/en/stable/api.html
 - https://docs.circuitpython.org/en/latest/shared-bindings/pwmio/
+- https://docs.circuitpython.org/projects/apds9960/en/latest/api.html
 
 
 RFCs:
