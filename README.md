@@ -1,6 +1,6 @@
 <!-- SPDX-License-Identifier: MIT -->
 <!-- SPDX-FileCopyrightText: Copyright 2025 Sam Blenny -->
-# BLE Keeb TOTP
+# BLE Keeb TOTP Token
 
 **DRAFT: WORK IN PROGRESS**
 
